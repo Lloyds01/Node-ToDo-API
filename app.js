@@ -1,8 +1,10 @@
+
 const express = require("express")
 const mongoose = require("mongoose")
-// const { MONGODB_URI, PORT } = require("./config")
-const MONGODB_URI = 'mongodb://localhost:27017/todoapp';
-const PORT = 3000;
+const jwt = require("jsonwebtoken")
+const bcrypt = require("bcryptjs")
+const { MONGODB_URI, PORT, JWT_SECRET} = require("./config")
+const User = require("./models/User")
 const Todo = require("./models/Todo")
 
 const app = express()
@@ -11,20 +13,67 @@ const app = express()
 app.use(express.json())
 
 // Connect to MongoDB
-
-console.log(MONGODB_URI, "here is the uri")
 mongoose
   .connect(MONGODB_URI, )
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("Could not connect to MongoDB", err))
 
+
+// Middleware for authentication
+const auth = async (req, res, next) => {
+    try {
+      const token = req.header("Authorization").replace("Bearer ", "")
+      const decoded = jwt.verify(token, JWT_SECRET)
+      const user = await User.findOne({ _id: decoded._id })
+  
+      if (!user) {
+        throw new Error()
+      }
+  
+      req.token = token
+      req.user = user
+      next()
+    } catch (error) {
+      res.status(401).send({ error: "Please authenticate." })
+    }
+  }
+
+// User Routes
+app.post("/register", async (req, res) => {
+    try {
+      const user = new User(req.body)
+      await user.save()
+      console.log(JWT_SECRET)
+      const token = jwt.sign({ _id: user._id.toString() }, JWT_SECRET)
+      console.log(token, "INFORMATION")
+      res.status(201).send({ user, token })
+      
+    } catch (error) {
+      res.status(400).send({error: "something went wrong"})
+    }
+  })
+  
+
+  app.post("/login", async (req, res) => {
+    try {
+      const user = await User.findOne({ email: req.body.email })
+      if (!user || !(await user.isValidPassword(req.body.password))) {
+        return res.status(401).send({ error: "Invalid login credentials" })
+      }
+
+      const token = jwt.sign({ _id: user._id.toString() }, JWT_SECRET)
+      res.send({ user, token })
+    } catch (error) {
+      res.status(400).send(error)
+    }
+  })
 // Root route
 app.get("/", (req, res) => {
   res.json({ message: "Welcome to the Todo API!" })
 })
 
 // GET all todos
-app.get("/api/todos", async (req, res) => {
+app.get("/api/todos", auth, async (req, res) => {
   try {
     const todos = await Todo.find()
     res.json(todos)
