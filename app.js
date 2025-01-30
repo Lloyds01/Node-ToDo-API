@@ -6,6 +6,7 @@ const bcrypt = require("bcryptjs")
 const { MONGODB_URI, PORT, JWT_SECRET} = require("./config")
 const User = require("./models/User")
 const Todo = require("./models/Todo")
+const crons = require("./cron")
 
 const app = express()
 
@@ -37,6 +38,8 @@ const auth = async (req, res, next) => {
       res.status(401).send({ error: "Please authenticate." })
     }
   }
+  //Clean TODO
+  
 
 // User Routes
 app.post("/register", async (req, res) => {
@@ -83,7 +86,7 @@ app.get("/api/todos", auth, async (req, res) => {
 })
 
 // GET a single todo
-app.get("/api/todos/:id", async (req, res) => {
+app.get("/api/todos/:id", auth, async (req, res) => {
   try {
     const todo = await Todo.findById(req.params.id)
     if (!todo) {
@@ -96,7 +99,7 @@ app.get("/api/todos/:id", async (req, res) => {
 })
 
 // POST a new todo
-app.post("/api/todos", async (req, res) => {
+app.post("/api/todos", auth, async (req, res) => {
   try {
     const { title } = req.body
     if (!title) {
@@ -111,7 +114,7 @@ app.post("/api/todos", async (req, res) => {
 })
 
 // PUT (update) a todo
-app.put("/api/todos/:id", async (req, res) => {
+app.put("/api/todos/:id", auth, async (req, res) => {
   try {
     const { title, completed } = req.body
     const updatedTodo = await Todo.findByIdAndUpdate(
@@ -129,7 +132,7 @@ app.put("/api/todos/:id", async (req, res) => {
 })
 
 // DELETE a todo
-app.delete("/api/todos/:id", async (req, res) => {
+app.delete("/api/todos/:id", auth, async (req, res) => {
   try {
     const deletedTodo = await Todo.findByIdAndDelete(req.params.id)
     if (!deletedTodo) {
