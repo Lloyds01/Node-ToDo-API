@@ -1,16 +1,15 @@
 
 const cron = require("node-cron")
-const User = require("./models/User")
 const Todo = require("./models/Todo")
 
 
 const cleanupOldTodos = async () => {
     const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 1);
   
     try {
       const result = await Todo.deleteMany({
-        completed: true,
+        completed: false,
         updatedAt: { $lt: thirtyDaysAgo }
       });
       console.log(`Cleaned up ${result.deletedCount} old completed todos`);
